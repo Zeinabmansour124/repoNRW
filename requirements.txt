@@ -3,5 +3,4 @@ torchvision
 timm
 opencv-python
 numpy
-scipy
 mediapipe

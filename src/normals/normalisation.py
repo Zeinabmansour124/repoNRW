@@ -1,8 +1,6 @@
 import numpy as np
 import cv2
-from scipy.ndimage import gaussian_filter
 from dataclasses import dataclass
-
 
 def load_depth_map(source, is_uint8_png: bool = False) -> np.ndarray:
     """
