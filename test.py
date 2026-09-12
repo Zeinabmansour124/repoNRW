@@ -1,15 +1,13 @@
 import cv2
 import numpy as np
-import torch
-import time
 from normalisation import DepthNormalizer, build_geometry_frame, normals_to_rgb
-from depth_module import get_depth   # <-- ton fichier avec la fonction Personne 1
+from depth_module import get_depth
 
-# Initialiser le normalizer
 normalizer = DepthNormalizer(alpha=0.15)
+cap = cv2.VideoCapture(0)
 
-# Ouvrir la webcam
-cap = cv2.VideoCapture(0)  # 0 = webcam par défaut
+# Taille d'UN rectangle à l'écran (chaque map aura exactement cette taille)
+RECT_W, RECT_H = 426, 320     # 3 x 426 = 1278 de large au total
 
 frame_id = 0
 while True:
@@ -17,34 +15,28 @@ while True:
     if not ret:
         break
 
-    # Convertir en RGB
     frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-
-    # Récupérer la depth map via MiDaS
     packet = get_depth(frame_rgb, frame_id=frame_id, imgsz=256)
     frame_id += 1
 
-    # Dimensions
     h, w = packet["depth_map"].shape
     fx = fy = w
     cx, cy = w / 2, h / 2
 
-    # Construire le GeometryFrame
     frame = build_geometry_frame(packet, fx, fy, cx, cy, normalizer, is_disparity=False)
 
-    # Convertir la normal map en RGB
     rgb = normals_to_rgb(frame.normal_map)
-
-    # Afficher côte à côte : image originale, depth map, normal map
-    depth_vis = (packet["depth_map"] * 255).astype(np.uint8)
-    depth_vis = cv2.cvtColor(depth_vis, cv2.COLOR_GRAY2BGR)
-
     normal_vis = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    depth_vis = cv2.cvtColor((packet["depth_map"] * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
 
-    combined = np.hstack((frame_bgr, depth_vis, normal_vis))
-    cv2.imshow("Webcam + Depth + Normals", combined)
+    # Forcer les 3 à EXACTEMENT le même rectangle
+    a = cv2.resize(frame_bgr,  (RECT_W, RECT_H))
+    b = cv2.resize(depth_vis,  (RECT_W, RECT_H))
+    c = cv2.resize(normal_vis, (RECT_W, RECT_H))
 
-    # Quitter avec 'q'
+    combined = np.hstack((a, b, c))
+    cv2.imshow("Webcam | Depth | Normals", combined)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
