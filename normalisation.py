@@ -185,7 +185,7 @@ def _generate_fake_depth_packet(frame_id=0, timestamp=0.0, h=480, w=640,
 def run_isolated_test():
     print("=== TEST EN ISOLATION (vrai contrat d'entrée, 480x640) ===\n")
 
-    h, w = 480, 640
+    h, w = 1332, 2048
     fx = fy = w
     cx, cy = w / 2, h / 2
     normalizer = DepthNormalizer(alpha=0.15)
