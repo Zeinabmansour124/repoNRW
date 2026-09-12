@@ -40,10 +40,18 @@ class DepthNormalizer:
         self._d_min = None
         self._d_max = None
 
-def normalize(self, raw_depth: np.ndarray) -> np.ndarray:
-        # La depth arrive DÉJÀ normalisée [0,1] depuis get_depth (contrat).
-        # On ne re-normalise pas, on sécurise juste les bornes.
-        return np.clip(raw_depth.astype(np.float64), 0.0, 1.0)
+    def normalize(self, raw_depth: np.ndarray) -> np.ndarray:
+        d_min = np.percentile(raw_depth, self.p_low)
+        d_max = np.percentile(raw_depth, self.p_high)
+
+        if self._d_min is None:
+            self._d_min, self._d_max = d_min, d_max
+        else:
+            self._d_min = (1 - self.alpha) * self._d_min + self.alpha * d_min
+            self._d_max = (1 - self.alpha) * self._d_max + self.alpha * d_max
+
+        norm = (raw_depth - self._d_min) / (self._d_max - self._d_min + 1e-6)
+        return np.clip(norm, 0.0, 1.0)
 
 
 def disparity_to_depth(raw_depth: np.ndarray, normalizer: "DepthNormalizer",
