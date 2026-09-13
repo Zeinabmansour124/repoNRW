@@ -80,20 +80,20 @@ class LevelConfig:
 # terrain (salle de demo reelle) avant le passage devant le jury.
 LEVELS: List[LevelConfig] = [
     LevelConfig(level_id=1, n_ghosts=1, radius=0.140, positions=[(0.50, 0.50)],
-                moving=False, time_limit=20.0, threshold=0.60,
+                moving=False, time_limit=35.0, threshold=0.60,
                 label="Level 1 - Centre, facile"),
     LevelConfig(level_id=2, n_ghosts=1, radius=0.110, positions=[(0.25, 0.40)],
-                moving=False, time_limit=20.0, threshold=0.62,
+                moving=False, time_limit=40.0, threshold=0.62,
                 label="Level 2 - Lateral, plus petit"),
     LevelConfig(level_id=3, n_ghosts=1, radius=0.086, positions=[(0.75, 0.65)],
-                moving=False, time_limit=22.0, threshold=0.65,
+                moving=False, time_limit=45.0, threshold=0.65,
                 label="Level 3 - Petit, coin difficile"),
     LevelConfig(level_id=4, n_ghosts=1, radius=0.068, positions=[(0.50, 0.50)],
-                moving=True, speed=0.18, time_limit=25.0, threshold=0.65,
+                moving=True, speed=0.18, time_limit=50.0, threshold=0.65,
                 label="Level 4 - Fantome mobile"),
     LevelConfig(level_id=5, n_ghosts=2, radius=0.053,
                 positions=[(0.28, 0.35), (0.72, 0.65)],
-                moving=True, speed=0.12, time_limit=30.0, threshold=0.60,
+                moving=True, speed=0.12, time_limit=60.0, threshold=0.60,
                 label="Level 5 - Multi-fantomes"),
 ]
 
