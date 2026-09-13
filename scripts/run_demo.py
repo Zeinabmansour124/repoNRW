@@ -26,6 +26,14 @@ from performance.fast_normals import compute_normals_fast as _cnf_full
 from performance.hand_light import (HandLightTracker, HandLightWorker,
                                     hand_state_to_light, draw_hand_panel)
 
+# === Jeu "Ghost in the Shadow" (Level 6 / bonus, active par la touche 'g') ===
+try:
+    from game.ghost_game import GhostGame
+    _GAME_AVAILABLE = True
+except Exception as _e:
+    print("[game] Ghost game indisponible :", _e)
+    _GAME_AVAILABLE = False
+
 
 # ============================================================
 # CONFIG
@@ -87,6 +95,7 @@ def make_relit_panel(depth, frame_bgr, lights, halos, material,
     # - plusieurs lumieres -> les ombres s'additionnent progressivement :
     #   une zone vue par toutes les lumieres reste claire, une zone occultee
     #   par plusieurs devient plus sombre (somme des contributions d'ombre).
+    shadow_total = None
     if shadow_renderer is not None and lights:
         vis_accum = np.zeros((rect_h, rect_w), dtype=np.float32)
         for (lx, ly, lz) in lights:
@@ -108,7 +117,7 @@ def make_relit_panel(depth, frame_bgr, lights, halos, material,
         else:
             halo_bgr = (210, 240, 255)
         relit_big = draw_light_halo(relit_big, hx, hy, lz, color_bgr=halo_bgr)
-    return relit_big
+    return relit_big, shadow_total
 
 
 def main():
@@ -170,6 +179,10 @@ def main():
     last_pc_2d = None
     last_relit = None
     last_hand_relit = None
+    last_hand_shadow = None   # masque d'ombre du panneau hand (pour le jeu Ghost)
+    # Jeu Ghost : cree une fois, active/desactive par la touche 'g'
+    ghost_game = GhostGame(frame_size=(RECT_W, RECT_H)) if _GAME_AVAILABLE else None
+    game_on = False
     # Palette : chaque main a sa couleur (Level 5 multi-light)
     HAND_COLORS = [(1.0, 0.85, 0.7), (0.6, 0.75, 1.0), (0.7, 1.0, 0.75), (1.0, 0.7, 0.85)]
     hand_lights = []   # liste de (x,y,z) : une lumiere par main detectee
@@ -238,7 +251,7 @@ def main():
         if last_relit is None or frame_id % RELIGHT_EVERY == 0:
             mouse_lights = [(light_state["x"], light_state["y"], light_state["z"])]
             mouse_halos = [(halo_state["x"], halo_state["y"])]
-            last_relit = make_relit_panel(
+            last_relit, _ = make_relit_panel(
                 depth, frame_bgr, mouse_lights, mouse_halos,
                 material, RELIGHT_SIZE, RECT_W, RECT_H,
                 shadow_renderer=shadow_renderer)
@@ -246,7 +259,7 @@ def main():
 
         # === HAND PANEL : ombre comme la souris (1 main) ou somme (N mains) ===
         if hand_worker is not None and (last_hand_relit is None or frame_id % RELIGHT_EVERY == 0):
-            last_hand_relit = make_relit_panel(
+            last_hand_relit, last_hand_shadow = make_relit_panel(
                 depth, frame_bgr, hand_lights, hand_halos,
                 material, RELIGHT_SIZE, RECT_W, RECT_H,
                 shadow_renderer=shadow_renderer, light_colors=HAND_COLORS)
@@ -279,8 +292,24 @@ def main():
             hand_panel = (cv2.resize(frame_bgr, (RECT_W, RECT_H)) * 0.3).astype(np.uint8)
             cv2.putText(hand_panel, "hand tracking OFF", (12, RECT_H // 2),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 60, 220), 2, cv2.LINE_AA)
-        cv2.putText(hand_panel, "HAND LIGHT", (12, 24),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 180, 40), 2, cv2.LINE_AA)
+
+        # === JEU GHOST : si actif, on avance l'etat et on dessine sur le panneau ===
+        # Le jeu se joue avec l'OMBRE pilotee par la main : amene l'ombre sur le
+        # fantome pour le capturer. Touche 'g' pour activer/desactiver.
+        if game_on and ghost_game is not None:
+            if last_hand_shadow is not None:
+                sm = cv2.resize(last_hand_shadow, (RECT_W, RECT_H),
+                                interpolation=cv2.INTER_LINEAR)
+                ghost_game.update(sm)
+            else:
+                sm = None
+            hand_panel = ghost_game.render(hand_panel, sm)
+        else:
+            cv2.putText(hand_panel, "HAND LIGHT", (12, 24),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 180, 40), 2, cv2.LINE_AA)
+            if ghost_game is not None:
+                cv2.putText(hand_panel, "[g] Ghost game", (12, 44),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, (180, 180, 180), 1, cv2.LINE_AA)
         row_w = combined.shape[1]
         bottom = np.zeros((RECT_H, row_w, 3), dtype=np.uint8)
         x0 = (row_w - RECT_W) // 2
@@ -295,9 +324,14 @@ def main():
 
         cv2.imshow(WINDOW, combined)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
             break
-
+        elif key == ord('g') and ghost_game is not None:
+            game_on = not game_on
+            print(f"[GHOST] game_on = {game_on}")   # <-- ajoute ça
+            if game_on:
+                ghost_game._reset_level()
     worker.stop()
     if hand_worker is not None:
         hand_worker.stop()
