@@ -82,16 +82,22 @@ def make_relit_panel(depth, frame_bgr, lights, halos, material,
 
     relit_big = cv2.resize(relit_small, (rect_w, rect_h), interpolation=cv2.INTER_CUBIC)
 
-    # OMBRES : une par lumiere, combinees (multiplication des visibilites)
+    # OMBRES : une par lumiere, combinees par MOYENNE (somme douce).
+    # - 1 seule lumiere  -> ombre identique au panneau souris.
+    # - plusieurs lumieres -> les ombres s'additionnent progressivement :
+    #   une zone vue par toutes les lumieres reste claire, une zone occultee
+    #   par plusieurs devient plus sombre (somme des contributions d'ombre).
     if shadow_renderer is not None and lights:
-        shadow_total = np.ones((rect_h, rect_w), dtype=np.float32)
+        vis_accum = np.zeros((rect_h, rect_w), dtype=np.float32)
         for (lx, ly, lz) in lights:
             # position lumiere -> normalise [0,1] (x ecran = -lx a cause du miroir)
             lxn = (-lx / 2.0 + 0.5)
             lyn = (ly / 2.0 + 0.5)
             m = shadow_renderer.compute(depth, (lxn, lyn))
             m = cv2.resize(m, (rect_w, rect_h), interpolation=cv2.INTER_LINEAR)
-            shadow_total = np.minimum(shadow_total, m)   # zone d'ombre = union
+            vis_accum += m
+        # visibilite moyenne : chaque lumiere apporte sa part d'eclairage
+        shadow_total = vis_accum / float(len(lights))
         relit_big = shadow_renderer.apply(relit_big, shadow_total)
 
     # Halos de toutes les lumieres (couleur par main)
@@ -113,7 +119,7 @@ def main():
     cap = ThreadedCamera(VIDEO_SOURCE)   # capture dans un thread -> ne bloque plus la boucle
     hud = HUD(target_fps=TARGET_FPS)
     pc_builder = PointCloudBuilder(downsample=5, output_size=(RECT_H, RECT_W))
-    shadow_renderer = ShadowRenderer(intensity=0.55, softness=0.5, downsample=8, n_steps=12)
+    shadow_renderer = ShadowRenderer(intensity=0.82, softness=0.5, downsample=8, n_steps=12)
 
     # === Depth dans un thread dédié (le secret des 90 FPS) ===
     estimator = DepthEstimator(imgsz=IMGSZ, infer_every_n=INFER_EVERY_N, ema_alpha=EMA_ALPHA)
@@ -238,7 +244,7 @@ def main():
                 shadow_renderer=shadow_renderer)
         relit = last_relit
 
-        # === HAND PANEL : TOUTES les mains (multi-light) + ombres combinees ===
+        # === HAND PANEL : ombre comme la souris (1 main) ou somme (N mains) ===
         if hand_worker is not None and (last_hand_relit is None or frame_id % RELIGHT_EVERY == 0):
             last_hand_relit = make_relit_panel(
                 depth, frame_bgr, hand_lights, hand_halos,
