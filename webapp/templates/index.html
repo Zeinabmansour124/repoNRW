@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghost in the Shadow — Level Select</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap');
+
+:root{
+  --cyan:#19f6d2;
+  --cyan-soft:#7fffee;
+  --blue:#08192c;
+  --panel:rgba(4,15,27,.78);
+  --line:rgba(25,246,210,.65);
+  --white:#f3fbff;
+  --muted:#8da5b8;
+  --locked:#344a5f;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#020914;color:var(--white);font-family:Inter,Arial,sans-serif}
+
+body{
+  background:
+    radial-gradient(900px 520px at 20% 6%, rgba(30,90,120,.30) 0%, rgba(2,9,20,0) 55%),
+    radial-gradient(780px 520px at 86% 26%, rgba(40,120,150,.22) 0%, rgba(2,9,20,0) 55%),
+    radial-gradient(1150px 720px at 50% 118%, rgba(12,60,80,.34) 0%, rgba(2,9,20,0) 60%),
+    linear-gradient(180deg,#06202e 0%,#041521 55%,#020912 100%);
+}
+
+body:after{
+  content:"";
+  position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 45%,transparent 0 38%,rgba(0,0,0,.48) 100%);
+}
+
+.app{position:relative;z-index:1;width:100%;height:100%;padding:34px 42px;display:flex;flex-direction:column}
+
+.topbar{display:flex;justify-content:space-between;align-items:flex-start}
+.vision{
+  border-left:2px solid var(--cyan);padding-left:16px;
+  text-transform:uppercase;letter-spacing:2px;font-size:11px;color:#bdeff1
+}
+.vision strong{display:block;font-size:12px;color:var(--white);margin-bottom:8px}
+.vision span{color:#7ba4b8}
+
+.depth-note{text-align:right;text-transform:uppercase;letter-spacing:3px;font-size:11px;color:#9ddbe2;line-height:1.7}
+
+.brand{text-align:center;margin-top:-18px}
+.brand h1{
+  margin:0;font-family:"Permanent Marker",cursive;font-size:72px;line-height:.92;
+  transform:rotate(-2deg);text-shadow:0 0 22px rgba(255,255,255,.25)
+}
+.brand .sub{
+  color:var(--cyan);font-size:22px;font-weight:800;letter-spacing:7px;margin-top:8px
+}
+.brand .tag{
+  margin-top:18px;letter-spacing:5px;font-size:13px;color:#b4d8e4;text-transform:uppercase
+}
+
+.level-area{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.levels{width:min(1260px,92vw);display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+
+.card{
+  position:relative;min-height:330px;border:2px solid rgba(104,139,165,.58);
+  border-radius:22px;overflow:hidden;background:linear-gradient(180deg,rgba(4,20,36,.72),rgba(1,9,18,.93));
+  box-shadow:0 20px 50px rgba(0,0,0,.35);transition:.25s ease;cursor:pointer
+}
+.card:hover:not(.locked){transform:translateY(-8px);border-color:var(--cyan);box-shadow:0 0 35px rgba(25,246,210,.18)}
+.card.selected{border-color:var(--cyan);box-shadow:0 0 38px rgba(25,246,210,.22),inset 0 0 35px rgba(25,246,210,.05)}
+.card.locked{cursor:not-allowed;filter:saturate(.55)}
+.card .art{
+  height:150px;display:flex;align-items:center;justify-content:center;position:relative;
+  background:radial-gradient(circle at 50% 55%,rgba(35,116,143,.35),transparent 55%)
+}
+.ghost{font-size:68px;color:white;filter:drop-shadow(0 0 15px rgba(255,255,255,.7))}
+.lock-icon{font-size:30px;color:#9fb3c2;opacity:.9}
+.badge{
+  position:absolute;right:12px;top:12px;width:30px;height:30px;border-radius:50%;
+  display:grid;place-items:center;background:var(--cyan);color:#001b1c;font-weight:900
+}
+.card-body{padding:14px 18px 18px}
+.num{font-size:12px;color:var(--cyan);letter-spacing:2px;font-weight:800}
+.card h2{font-size:21px;margin:6px 0 5px}
+.card p{font-size:11px;color:#9fb2c2;min-height:32px;margin:0 0 18px;line-height:1.5}
+.meta{display:flex;justify-content:space-between;font-size:12px;color:#c4d6df}
+.meta span{display:flex;align-items:center;gap:7px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+
+.challenge{
+  width:min(1040px,88vw);margin:0 auto 12px;padding:18px 28px;border:1px solid rgba(25,246,210,.55);
+  border-radius:18px;background:rgba(2,13,24,.84);backdrop-filter:blur(8px);
+  display:flex;align-items:center;gap:24px;box-shadow:0 10px 35px rgba(0,0,0,.3)
+}
+.trophy{font-size:38px}
+.challenge h3{margin:0 0 5px;text-transform:uppercase;letter-spacing:2px}
+.challenge p{margin:0;color:#9eb4c1;font-size:12px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:7px}
+.progress i{font-style:normal;width:30px;height:30px;border:1px solid #496274;border-radius:50%;display:grid;place-items:center;font-size:12px;color:#8fa6b6}
+.progress i.done{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(25,246,210,.25)}
+.progress b{font-size:14px;color:#637c8f}
+
+.footer{display:flex;justify-content:space-between;align-items:center}
+.back{border:1px solid var(--cyan);border-radius:24px;padding:10px 22px;color:var(--cyan);background:rgba(0,10,19,.65);cursor:pointer}
+.status{font-size:11px;color:#8fa9b8;letter-spacing:2px;text-transform:uppercase}
+.status strong{color:var(--cyan)}
+
+.toast{
+  position:fixed;left:50%;bottom:30px;transform:translate(-50%,120px);
+  background:#061a2a;border:1px solid var(--cyan);padding:13px 22px;border-radius:12px;
+  box-shadow:0 0 35px rgba(25,246,210,.2);transition:.3s;z-index:10;font-size:13px
+}
+.toast.show{transform:translate(-50%,0)}
+
+.modal{
+  position:fixed;inset:0;background:rgba(0,4,10,.78);backdrop-filter:blur(9px);
+  display:none;place-items:center;z-index:20
+}
+.modal.open{display:grid}
+.modal-box{width:min(510px,90vw);padding:30px;border:1px solid var(--cyan);border-radius:22px;background:#061321;box-shadow:0 0 70px rgba(25,246,210,.15)}
+.modal-box h2{margin:0 0 8px;font-size:30px}
+.modal-box p{color:#9bb1bf;line-height:1.6;font-size:13px}
+.modal-actions{display:flex;gap:12px;margin-top:24px}
+.btn{flex:1;padding:13px;border-radius:12px;border:1px solid #496579;background:#091d2d;color:white;cursor:pointer}
+.btn.primary{background:var(--cyan);color:#001717;border-color:var(--cyan);font-weight:800}
+
+@media(max-width:1050px){
+  body{overflow:auto}
+  .app{min-height:100vh;height:auto;padding:24px}
+  .levels{grid-template-columns:repeat(2,1fr);padding:25px 0}
+  .brand h1{font-size:54px}
+  .level-area{align-items:flex-start}
+}
+@media(max-width:620px){
+  .topbar{display:none}
+  .brand{margin-top:10px}
+  .brand h1{font-size:42px}
+  .brand .sub{font-size:15px;letter-spacing:4px}
+  .levels{grid-template-columns:1fr}
+  .challenge{flex-wrap:wrap}
+  .progress{margin-left:0}
+}
+
+/* ===== ECRAN DE JEU (ajoute pour l'integration serveur) ===== */
+#gameScreen{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;
+  padding:20px 26px;background:#020914}
+#gameScreen.open{display:flex}
+.g-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.g-chip{border:1.5px solid var(--line);border-radius:14px;padding:8px 16px;background:var(--panel);
+  display:flex;flex-direction:column;line-height:1.15}
+.g-chip .lab{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase}
+.g-chip .val{font-size:20px;font-weight:800;color:var(--cyan)}
+.g-dots{display:flex;align-items:center;gap:6px}
+.g-dots .d{width:12px;height:12px;border-radius:50%;border:2px solid var(--line)}
+.g-dots .d.on{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.g-bar{width:130px;height:6px;border-radius:5px;background:rgba(25,246,210,.15);overflow:hidden}
+.g-bar>i{display:block;height:100%;width:0;background:var(--cyan);transition:.2s width}
+.g-stage{flex:1;position:relative;border:1.5px solid var(--line);border-radius:16px;overflow:hidden;
+  background:#02090e;display:flex;align-items:center;justify-content:center}
+.g-stage img{width:100%;height:100%;object-fit:contain;display:block}
+.g-hint{position:absolute;top:16px;left:16px;border:1.5px solid var(--line);border-radius:14px;
+  padding:10px 14px;background:var(--panel);max-width:270px;font-size:13px;color:#cdeeeb}
+.g-wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);letter-spacing:2px;font-size:14px;text-align:center;padding:20px}
+.g-over{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;background:rgba(2,9,14,.6);text-align:center}
+.g-over h2{font-size:54px;margin:0;letter-spacing:3px;text-shadow:0 0 24px currentColor}
+.g-over p{color:var(--muted);letter-spacing:3px;margin-top:8px}
+.g-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.g-tag .big{font-size:18px;font-weight:800;letter-spacing:2px}
+.g-tag .rm{color:var(--muted);font-size:12px}
+.g-pct{color:var(--cyan);font-weight:800;font-size:22px}
+
+</style>
+</head>
+
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="vision">
+      <strong>REAL-TIME VISION GAME</strong>
+      <span>Hand Tracking &nbsp;•&nbsp; Depth Estimation &nbsp;•&nbsp; Shadows</span>
+    </div>
+    <div class="depth-note">SEE THE DEPTH<br><span>PLAY WITH SHADOWS</span></div>
+  </div>
+
+  <header class="brand">
+    <h1>GHOST</h1>
+    <div class="sub">IN THE SHADOW</div>
+    <div class="tag">Move your hand &nbsp;•&nbsp; Cast a shadow &nbsp;•&nbsp; Capture the ghosts</div>
+  </header>
+
+  <main class="level-area">
+    <section class="levels" id="levels"></section>
+  </main>
+
+  <section class="challenge">
+    <div class="trophy">♜</div>
+    <div>
+      <h3>The Challenge</h3>
+      <p>Complete all 5 levels in a row and prove you're the true shadow master.</p>
+    </div>
+    <div class="progress" id="challengeProgress"></div>
+    <div style="margin-left:auto;text-align:right">
+      <div style="color:var(--cyan);font-weight:800;font-size:12px">REWARD</div>
+      <div style="font-size:11px;color:#9fb3c1">Special victory screen + 500 points</div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <button class="back" onclick="showToast('Back to main menu')">‹ &nbsp; BACK</button>
+    <div class="status">Progress: <strong id="statusText">LEVEL 1 UNLOCKED</strong></div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<!-- ===== ECRAN DE JEU ===== -->
+<div id="gameScreen">
+  <div class="g-top">
+    <button class="back" onclick="backToMenu()">‹ &nbsp; MENU</button>
+    <div class="g-dots" id="gDots"></div>
+    <div class="g-bar"><i id="gBar"></i></div>
+    <div class="g-chip"><span class="lab">Level</span><span class="val" id="gLevel">1/5</span></div>
+    <div class="g-chip"><span class="lab">Time left</span><span class="val" id="gTime">00:00</span></div>
+    <div class="g-chip"><span class="lab">Score</span><span class="val" id="gScore">0</span></div>
+  </div>
+  <div class="g-stage">
+    <div class="g-hint">✋ Move your hand in front of the webcam to cast the shadow and cover the ghost!</div>
+    <img id="gFeed" alt="live feed">
+    <div class="g-wait" id="gWait">Opening camera & loading the depth model…</div>
+    <div class="g-over" id="gOver">
+      <h2 id="gOverTitle">LEVEL UP!</h2>
+      <p id="gOverSub"></p>
+      <div style="margin-top:22px"><button class="btn primary" style="padding:12px 26px" onclick="backToMenu()">MENU</button></div>
+    </div>
+  </div>
+  <div class="g-bottom">
+    <div class="g-tag">👻 <span class="big" id="gName">LEVEL 1</span> <span class="rm" id="gRoom"></span></div>
+    <div>Overlap <span class="g-pct" id="gPct">0%</span> · threshold <span id="gThr">70</span>%</div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="num" id="modalLevel">LEVEL 1</div>
+    <h2 id="modalTitle">The First Apparition</h2>
+    <p id="modalDescription"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">CANCEL</button>
+      <button class="btn primary" onclick="startLevel()">START LEVEL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const levels = [
+  {n:1,title:"THE FIRST APPARITION",desc:"A large centered ghost. Learn to control your shadow.",time:"35s",threshold:"60%"},
+  {n:2,title:"THE SIDE GHOST",desc:"The ghost moves to the side. Precision starts here.",time:"40s",threshold:"62%"},
+  {n:3,title:"THE CORNER",desc:"A smaller target hidden in the corner.",time:"45s",threshold:"65%"},
+  {n:4,title:"THE MOVING GHOST",desc:"Follow a moving ghost with your projected shadow.",time:"50s",threshold:"65%"},
+  {n:5,title:"THE MULTI-GHOSTS",desc:"Capture several ghosts simultaneously.",time:"60s",threshold:"60%"}
+];
+
+let STATE = null;          // dernier /state du serveur
+let selected = 1;
+let modalLevel = 1;
+
+async function api(path, method="GET"){
+  const r = await fetch(path, {method});
+  return await r.json();
+}
+
+// ---------- rendu du MENU (garde ton design) ----------
+function render(){
+  if(!STATE) return;
+  const unlocked = STATE.max_unlocked;
+
+  document.getElementById("levels").innerHTML = levels.map(l => {
+    const isUnlocked = l.n <= unlocked;
+    const isDone = l.n < unlocked;
+    return `
+      <article class="card ${!isUnlocked?'locked':''} ${l.n===selected?'selected':''}"
+               onclick="${isUnlocked?`selectLevel(${l.n})`:`lockedLevel(${l.n})`}">
+        <div class="art">
+          ${isUnlocked ? `<div class="ghost">♧</div>` : `<div class="lock-icon">▣</div>`}
+          ${isDone ? `<div class="badge">✓</div>` : ""}
+        </div>
+        <div class="card-body">
+          <div class="num">LEVEL ${l.n}</div>
+          <h2>${l.title}</h2>
+          <p>${isUnlocked ? l.desc : `Unlock after completing level ${l.n-1}.`}</p>
+          <div class="meta">
+            <span><i class="dot"></i>${isUnlocked ? l.time : "LOCKED"}</span>
+            <span>${isUnlocked ? l.threshold : "▣"}</span>
+          </div>
+        </div>
+      </article>`;
+  }).join("");
+
+  document.getElementById("statusText").textContent =
+    unlocked >= 5 ? "ALL LEVELS UNLOCKED" : `LEVEL ${unlocked} UNLOCKED`;
+  document.getElementById("challengeProgress").innerHTML =
+    levels.map(l => `<i class="${l.n < unlocked ? 'done':''}">${l.n}</i>${l.n<5?'<b>—</b>':''}`).join("");
+}
+
+function selectLevel(n){ selected=n; render(); openModal(n); }
+function lockedLevel(n){ showToast(`Level ${n} is locked — complete Level ${n-1} first.`); }
+
+function openModal(n){
+  modalLevel=n;
+  const l=levels[n-1];
+  document.getElementById("modalLevel").textContent=`LEVEL ${n}`;
+  document.getElementById("modalTitle").textContent=l.title;
+  document.getElementById("modalDescription").textContent =
+    `${l.desc} Time limit: ${l.time}. Capture threshold: ${l.threshold}.`;
+  document.getElementById("modal").classList.add("open");
+}
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+
+// ---------- START : lance vraiment le niveau cote serveur ----------
+async function startLevel(){
+  closeModal();
+  STATE = await api("/play/"+modalLevel, "POST");
+  showGameScreen();
+  render();
+}
+
+function showGameScreen(){
+  document.getElementById("gameScreen").classList.add("open");
+  const feed = document.getElementById("gFeed");
+  if(!feed.src) feed.src = "/video";   // demarre le flux MJPEG une seule fois
+}
+
+async function backToMenu(){
+  STATE = await api("/menu", "POST");
+  document.getElementById("gameScreen").classList.remove("open");
+  render();
+}
+
+// ---------- rendu de l'ECRAN DE JEU ----------
+function renderGame(){
+  const onGame = document.getElementById("gameScreen").classList.contains("open");
+  if(!onGame || !STATE) return;
+
+  const p = STATE.playing;
+  // dots + wait
+  let dots="";
+  for(let i=1;i<=STATE.n_levels;i++) dots += `<span class="d ${i<=STATE.max_unlocked?'on':''}"></span>`;
+  document.getElementById("gDots").innerHTML = dots;
+  document.getElementById("gWait").style.display =
+    (STATE.pipeline && STATE.pipeline.ready) ? "none" : "flex";
+
+  const over = document.getElementById("gOver");
+  if(!p){ over.style.display="none"; return; }
+
+  document.getElementById("gLevel").textContent = p.level + "/" + STATE.n_levels;
+  document.getElementById("gTime").textContent  = "00:" + String(Math.round(p.time_left)).padStart(2,"0");
+  document.getElementById("gScore").textContent = STATE.total_score;
+  document.getElementById("gName").textContent  = "LEVEL " + p.level;
+  document.getElementById("gRoom").textContent  = p.room || "";
+  document.getElementById("gPct").textContent   = p.overlap_pct + "%";
+  document.getElementById("gThr").textContent   = p.threshold;
+  document.getElementById("gBar").style.width   = Math.min(100,(p.overlap_pct/p.threshold)*100)+"%";
+
+  const t=document.getElementById("gOverTitle"), s=document.getElementById("gOverSub");
+  if(p.state==="level_up"){ over.style.display="flex"; t.textContent="LEVEL UP!"; t.style.color="#19f6d2"; s.textContent="Ghost captured"; }
+  else if(p.state==="failed"){ over.style.display="flex"; t.textContent="LEVEL FAILED"; t.style.color="#ff6a6a"; s.textContent="Time's up — try again"; }
+  else if(p.state==="victory" || p.finished){ over.style.display="flex"; t.textContent="VICTORY!"; t.style.color="#7fffee"; s.textContent="You are the shadow master · +500 points"; }
+  else over.style.display="none";
+}
+
+function showToast(message){
+  const t=document.getElementById("toast");
+  t.textContent=message;t.classList.add("show");
+  clearTimeout(window.__toast);
+  window.__toast=setTimeout(()=>t.classList.remove("show"),2800);
+}
+
+// ---------- boucle d'etat ----------
+async function tick(){
+  try{ STATE = await api("/state"); render(); renderGame(); }catch(e){}
+}
+setInterval(tick, 250);
+tick();
+</script>
+</body>
+</html>
